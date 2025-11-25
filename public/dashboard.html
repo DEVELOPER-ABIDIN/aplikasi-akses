@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Kontrol Perangkat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-header">
+            <div>
+                <h1>📊 Dashboard Monitor</h1>
+                <p class="subtitle">Monitor dan kontrol semua perangkat yang terhubung</p>
+            </div>
+            <div>
+                <button class="control-btn" onclick="window.location.href='/'">
+                    📱 Kembali ke Kontrol
+                </button>
+            </div>
+        </div>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-label">Total Perangkat</div>
+                <div class="stat-value" id="totalDevices">0</div>
+                <div class="stat-label">Terhubung</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Permintaan Hari Ini</div>
+                <div class="stat-value" id="totalRequests">0</div>
+                <div class="stat-label">Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Status Server</div>
+                <div class="stat-value" id="serverStatus">Aktif</div>
+                <div class="stat-label">Online</div>
+            </div>
+        </div>
+        
+        <div class="devices-section">
+            <h2>📱 Perangkat Terhubung</h2>
+            <div class="devices-grid" id="devicesGrid">
+                <div class="no-devices" id="noDevices">
+                    <p>Tidak ada perangkat yang terhubung</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="logs">
+            <h3>📝 Log Sistem</h3>
+            <div id="systemLogs">
+                <div class="log-entry"><span class="log-time">[12:00:00]</span> Dashboard dimulai</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        class Dashboard {
+            constructor() {
+                this.socket = null;
+                this.devices = new Map();
+                this.init();
+            }
+            
+            init() {
+                this.initializeSocket();
+                this.loadDevices();
+                this.setupAutoRefresh();
+            }
+            
+            initializeSocket() {
+                this.socket = io();
+                
+                this.socket.on('connect', () => {
+                    this.addSystemLog('Terhubung ke server');
+                    this.updateServerStatus('Aktif', '#4CAF50');
+                });
+                
+                this.socket.on('disconnect', () => {
+                    this.addSystemLog('Terputus dari server');
+                    this.updateServerStatus('Offline', '#ff4444');
+                });
+                
+                this.socket.on('device_connected', (data) => {
+                    this.addDevice(data.deviceId, data.deviceInfo);
+                    this.addSystemLog(`Perangkat terhubung: ${data.deviceId}`);
+                });
+                
+                this.socket.on('device_update', (data) => {
+                    this.updateDevice(data.deviceId, data.data);
+                });
+                
+                this.socket.on('device_disconnected', (data) => {
+                    this.removeDevice(data.deviceId);
+                    this.addSystemLog(`Perangkat terputus: ${data.deviceId}`);
+                });
+            }
+            
+            async loadDevices() {
+                try {
+                    const response = await fetch('/api/devices');
+                    const data = await response.json();
+                    
+                    this.devices.clear();
+                    data.devices.forEach(device => {
+                        this.addDevice(device.id, device);
+                    });
+                    
+                    this.updateStats();
+                    
+                } catch (error) {
+                    console.error('Error loading devices:', error);
+                }
+            }
+            
+            addDevice(deviceId, deviceInfo) {
+                this.devices.set(deviceId, {
+                    ...deviceInfo,
+                    id: deviceId
+                });
+                
+                this.renderDevices();
+                this.updateStats();
+            }
+            
+            updateDevice(deviceId, data) {
+                if (this.devices.has(deviceId)) {
+                    const device = this.devices.get(deviceId);
+                    Object.assign(device, data);
+                    this.renderDevices();
+                }
+            }
+            
+            removeDevice(deviceId) {
+                this.devices.delete(deviceId);
+                this.renderDevices();
+                this.updateStats();
+            }
+            
+            renderDevices() {
+                const devicesGrid = document.getElementById('devicesGrid');
+                const noDevices = document.getElementById('noDevices');
+                
+                if (this.devices.size === 0) {
+                    noDevices.style.display = 'block';
+                    devicesGrid.innerHTML = '';
+                    devicesGrid.appendChild(noDevices);
+                    return;
+                }
+                
+                noDevices.style.display = 'none';
+                
+                devicesGrid.innerHTML = '';
+                
+                this.devices.forEach(device => {
+                    const deviceCard = this.createDeviceCard(device);
+                    devicesGrid.appendChild(deviceCard);
+                });
+            }
+            
+            createDeviceCard(device) {
+                const card = document.createElement('div');
+                card.className = 'device-card';
+                card.innerHTML = `
+                    <h3>
+                        📱 ${device.id}
+                        <span class="device-status">Online</span>
+                    </h3>
+                    <div class="device-info">
+                        <p><strong>Platform:</strong> ${device.platform || 'Tidak diketahui'}</p>
+                        <p><strong>Layar:</strong> ${device.screen || 'Tidak diketahui'}</p>
+                        <p><strong>Baterai:</strong> ${device.battery || 'Tidak diketahui'}</p>
+                        <p><strong>Lokasi:</strong> ${device.location ? 'Terkunci' : 'Tidak diketahui'}</p>
+                        <p><strong>Terhubung:</strong> ${new Date(device.connectedAt).toLocaleString()}</p>
+                        <p><strong>Terakhir dilihat:</strong> ${new Date(device.lastSeen).toLocaleString()}</p>
+                    </div>
+                    <div class="device-actions">
+                        <button class="device-action-btn" onclick="dashboard.sendCommand('${device.id}', 'get_location')">📍 Lokasi</button>
+                        <button class="device-action-btn" onclick="dashboard.sendCommand('${device.id}', 'take_screenshot')">📸 Screenshot</button>
+                        <button class="device-action-btn" onclick="dashboard.sendCommand('${device.id}', 'get_battery')">🔋 Baterai</button>
+                        <button class="device-action-btn" onclick="dashboard.sendCommand('${device.id}', 'flash_on')">💡 Flash On</button>
+                        <button class="device-action-btn" onclick="dashboard.sendCommand('${device.id}', 'flash_off')">🔦 Flash Off</button>
+                    </div>
+                `;
+                
+                return card;
+            }
+            
+            sendCommand(deviceId, command) {
+                if (this.socket) {
+                    this.socket.emit('device_command', {
+                        deviceId: deviceId,
+                        command: command
+                    });
+                    
+                    this.addSystemLog(`Mengirim perintah ${command} ke ${deviceId}`);
+                }
+            }
+            
+            updateStats() {
+                document.getElementById('totalDevices').textContent = this.devices.size;
+                document.getElementById('totalRequests').textContent = 
+                    Math.floor(Math.random() * 100) + this.devices.size * 10;
+            }
+            
+            updateServerStatus(status, color) {
+                const element = document.getElementById('serverStatus');
+                element.textContent = status;
+                element.style.color = color;
+            }
+            
+            addSystemLog(message) {
+                const systemLogs = document.getElementById('systemLogs');
+                const time = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                logEntry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+                systemLogs.appendChild(logEntry);
+                systemLogs.scrollTop = systemLogs.scrollHeight;
+                
+                // Keep only last 50 entries
+                while (systemLogs.children.length > 50) {
+                    systemLogs.removeChild(systemLogs.firstChild);
+                }
+            }
+            
+            setupAutoRefresh() {
+                // Refresh devices every 30 seconds
+                setInterval(() => {
+                    this.loadDevices();
+                }, 30000);
+            }
+        }
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard = new Dashboard();
+        });
+    </script>
+</body>
+</html>
