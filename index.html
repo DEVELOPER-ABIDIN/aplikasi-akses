@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontrol Perangkat via Telegram</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Kontrol Perangkat via Telegram</h1>
+            <p>Kelola perangkat Anda dari jarak jauh melalui bot Telegram</p>
+        </header>
+
+        <div class="status-panel">
+            <div class="status-item">
+                <span class="status-label">Status Koneksi:</span>
+                <span id="connection-status" class="status-value disconnected">Terputus</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Status Perangkat:</span>
+                <span id="device-status" class="status-value unknown">Tidak Diketahui</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">ID Telegram:</span>
+                <span id="telegram-id" class="status-value">-</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h2>Kontrol Perangkat</h2>
+            
+            <div class="control-group">
+                <h3>Informasi Perangkat</h3>
+                <button id="btn-battery" class="control-btn">Cek Baterai</button>
+                <button id="btn-location" class="control-btn">Dapatkan Lokasi</button>
+                <button id="btn-device-info" class="control-btn">Info Perangkat</button>
+            </div>
+
+            <div class="control-group">
+                <h3>Kamera & Media</h3>
+                <button id="btn-screenshot" class="control-btn">Ambil Screenshot</button>
+                <button id="btn-camera" class="control-btn">Ambil Foto Kamera</button>
+                <button id="btn-flash-toggle" class="control-btn">Toggle Flash</button>
+            </div>
+
+            <div class="control-group">
+                <h3>Sistem</h3>
+                <button id="btn-apps" class="control-btn">Daftar Aplikasi</button>
+                <button id="btn-notifications" class="control-btn">Notifikasi Terbaru</button>
+                <button id="btn-reboot" class="control-btn warning">Restart Perangkat</button>
+            </div>
+
+            <div class="control-group">
+                <h3>Pesan & Panggilan</h3>
+                <button id="btn-send-sms" class="control-btn">Kirim SMS</button>
+                <button id="btn-call" class="control-btn">Lakukan Panggilan</button>
+            </div>
+        </div>
+
+        <div class="logs">
+            <h2>Log Aktivitas</h2>
+            <div id="log-container" class="log-container">
+                <div class="log-entry">Sistem siap. Hubungkan perangkat Anda.</div>
+            </div>
+            <button id="btn-clear-logs" class="control-btn secondary">Bersihkan Log</button>
+        </div>
+    </div>
+
+    <!-- Modal untuk input SMS -->
+    <div id="sms-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Kirim SMS</h3>
+            <form id="sms-form">
+                <div class="form-group">
+                    <label for="phone-number">Nomor Tujuan:</label>
+                    <input type="tel" id="phone-number" required placeholder="+628123456789">
+                </div>
+                <div class="form-group">
+                    <label for="sms-message">Pesan:</label>
+                    <textarea id="sms-message" required placeholder="Tulis pesan Anda di sini..."></textarea>
+                </div>
+                <button type="submit" class="control-btn">Kirim SMS</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal untuk input panggilan -->
+    <div id="call-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Lakukan Panggilan</h3>
+            <form id="call-form">
+                <div class="form-group">
+                    <label for="call-number">Nomor Tujuan:</label>
+                    <input type="tel" id="call-number" required placeholder="+628123456789">
+                </div>
+                <button type="submit" class="control-btn">Panggil</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
